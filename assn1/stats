@@ -1,10 +1,11 @@
 #!/bin/bash
 
-eex() { echo "$@"; exit 1; }
+eex(){ echo "$@"; exit 1; }
 
-echo $#
-[[ "$#" =~ ^(1|2)$ ]] && [[ "$1" =~ ^(-r.*|-c.*)$ ]] || eex "Usage: stats {-rows|-cols} [file]"
-[ "$#" -eq 2 ] && [ -r "$2" ] || eex "$0: cannot read $2"
+[[ "$#" =~ ^(1|2)$ ]] && { [[ "$1" =~ ^-r.*$ ]] && axis="rows"; } || { [[ "$1" =~ ^-c.*$ ]] && axis="cols"; } || eex "Usage: stats {-rows|-cols} [file]"
+[ "$#" -eq 2 ] && { [ ! -r "$2" ] && eex "$0: cannot read $2" || mode=file; } || mode="stdin"
+
+echo mode: $mode
 
 
 echo good result
