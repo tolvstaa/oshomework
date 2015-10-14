@@ -1,12 +1,32 @@
-#!/bin/bash
+#!/bin/bash -x
+_eex(){ [ $# -eq 0 ] && echo 'Usage: stats {-rows | cols} [file]' || echo $@ && exit 1; } # echo & exit 1
+_avg(){ if [ $# -gt 0 ]; then # if the function has arguments
+	total=0
+	for i in $@; do let total+=i; done
+	echo $((($total / $#) + ($total % $# * 2 >= $#)))
+fi }
+_med(){ if [ $# -gt 0 ]; then 
+	temp=$(printf "%s\n" "$@" | sort -nr | sed 's/\n/ /g')
+	echo $(echo $temp | cut -d' ' -f "$(((${#temp} / 2) - 2))")
+fi }
 
-eex(){ echo "$@"; exit 1; }
+[[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
+[ $# -eq 2 ] && [ ! -r $2 ] && _eex "$0: cannot read $2" # file checking
+input=${2:-/dev/stdin} # use stdin if file not defined
 
-[[ "$#" =~ ^(1|2)$ ]] && { [[ "$1" =~ ^-r.*$ ]] && axis="rows"; } || { [[ "$1" =~ ^-c.*$ ]] && axis="cols"; } || eex "Usage: stats {-rows|-cols} [file]"
-[ "$#" -eq 2 ] && { [ ! -r "$2" ] && eex "$0: cannot read $2" || mode=file; } || mode="stdin"
-
-echo mode: $mode
-
-
-echo good result
-
+if [ $axis == "rows" ]; then # rows calculations
+	echo Average Median
+	while read -r line; do echo -e "$(_avg $line)\t$(_med $line)"; done < $input
+else		# columns calculations
+	columncalc(){ for col in $(seq 1 "$(echo "$1" | wc -l)"); do
+			list=""
+			while read -r line; do list="$list $(echo $line | cut -d' ' -f$col)"; done <<< "$1" # Put column in variable
+			printf "%s\t" "$(eval "$2 $list")" # run average or median function, from second arg
+	done }
+	idata=$(<$input) # store data in variable because stdin can't be read twice
+	echo Averages:
+	columncalc "$idata" "_avg"
+	echo -e "\nMedians:"
+	columncalc "$idata" "_med"
+	echo ""
+fi
