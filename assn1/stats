@@ -1,25 +1,42 @@
 #!/bin/bash
 # echo & exit 1
-_eex(){ [ $# -eq 0 ] && echo 'Usage: stats {-rows | cols} [file]' || echo $@ && exit 1; }
+_eex(){ [ $# -eq 0 ] && echo './stats {-rows|cols} [file]' >&2 || echo $@ >&2 && exit 1; }
 _avg() {
-
+	total=0
+	count="$(wc -w $1 | cut -d' ' -f1)"
+	while read -r line; do [ -n "$line" ] && let "total+=$line"; done < $1
+	[ "$count" -ne 0 ] && echo "$((($total / $count) + ($total % $count * 2 >= $count)))"
 }
 _med() {
-
+	count="$(wc -w $1 | cut -d' ' -f1)"
+	sort -rn $1 -o $1
+	echo "$(cat $1 | sed "$(($count / 2 + 1))q;d")"
 }
 
 [[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
 [ $# -eq 2 ] && [ ! -r $2 ] && _eex "$0: cannot read $2" # file checking
-input=${2:-/dev/stdin} # use stdin if file not defined
-file="./temp.$$" && trap "rm $file -f; exit" SIGINT SIGHUP SIGTERM
+file="./temp.$$"
+touch $file && trap "rm $file -f; exit" SIGINT SIGHUP SIGTERM || _eex "Could not create temp file."
+input="$(cat ${2:-/dev/stdin})" # use stdin if file not defined
 
 if [ $axis == "rows" ]; then # rows calculations
-	echo
+	echo -e "Average\tMedian"
+	while read -r line; do
+		echo "$line" | tr '\t' '\n' > $file
+		echo -e "$(_avg $file)\t$(_med $file)"
+	done <<< "$input"
 else
-	columncalc() {}
+	columncalc() {
+		for col in $(seq 1 "$(echo "$input" | head -n1 | wc -w)"); do
+			echo "" > $file
+			while read -r line; do printf "$(echo "$line" | cut -d$'\t' -f$col)\n" >> $file; done <<< "$input"
+			printf "%s\t" "$(eval "$1 $file")"
+		done
+	}
 	echo "Averages:"
-	columncalc $file "_avg"
+	columncalc "_avg"
 	echo -e "\nMedians:"
-	columncalc $file "_med"
+	columncalc "_med"
 	echo
 fi
+rm -f $file
