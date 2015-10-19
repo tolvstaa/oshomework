@@ -1,12 +1,12 @@
 #!/bin/bash
-_eex(){ [ $# -eq 0 ] && echo './stats {-rows|-cols} [file]' >&2 || echo $@ >&2 && exit 1; } # echo & exit 1
+_eex(){ [ $# -eq 0 ] && echo './stats {-rows|-cols} [file]' >&2 || echo $@ >&2 && exit 1; } # echo arguments & exit 1
 _avg(){ if [ $# -gt 0 ]; then # if the function has arguments
 	total=0
-	for i in $@; do let total+=i; done
-	echo $((($total / $#) + ($total % $# * 2 >= $#)))
+	for i in $@; do let total+=i; done	# Sum the arguments
+	echo $((($total / $#) + ($total % $# * 2 >= $#))) # print the sum over the count, plus rounding
 fi }
 _med(){ if [ $# -gt 0 ]; then
-	printf "%s\n" "$@" | sort -nr | sed -n "$(($# / 2 + ($# % 2)))p"
+	printf "%s\n" "$@" | sort -nr | sed -n "$(($# / 2 + ($# % 2)))p" # sort args, print the middle, skewing larger on an even count
 fi }
 
 [[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
@@ -15,17 +15,17 @@ input=${2:-/dev/stdin} # use stdin if file not defined
 
 if [ $axis == "rows" ]; then # rows calculations
 	echo -e "Average\tMedian"
-	while read -r line; do echo -e "$(_avg $line)\t$(_med $line)"; done < $input
-else		# columns calculations
-	columncalc(){ for col in $(seq 1 "$(echo "$1" | head -n1 | wc -w)"); do
+	while read -r line; do echo -e "$(_avg $line)\t$(_med $line)"; done < $input # for each line, do average and median calculations
+else			# columns calculations
+	columncalc(){ for col in $(seq 1 "$(echo "$1" | head -n1 | wc -w)"); do # for each column in the file
 			list=""
 			while read -r line; do list="$list $(echo $line | cut -d' ' -f$col)"; done <<< "$1" # Put column in variable
 			printf "%s\t" "$(eval "$2 $list")" # run average or median function, from second arg
 	done }
 	idata=$(<$input) # store data in variable because stdin can't be read twice
 	echo Averages:
-	columncalc "$idata" "_avg"
+	columncalc "$idata" "_avg" # calculate column averages
 	echo -e "\nMedians:"
-	columncalc "$idata" "_med"
+	columncalc "$idata" "_med" # calculate column medians
 	echo ""
 fi
