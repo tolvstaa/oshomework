@@ -1,0 +1,25 @@
+#!/bin/bash
+# echo & exit 1
+_eex(){ [ $# -eq 0 ] && echo 'Usage: stats {-rows | cols} [file]' || echo $@ && exit 1; }
+_avg() {
+
+}
+_med() {
+
+}
+
+[[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
+[ $# -eq 2 ] && [ ! -r $2 ] && _eex "$0: cannot read $2" # file checking
+input=${2:-/dev/stdin} # use stdin if file not defined
+file="./temp.$$" && trap "rm $file -f; exit" SIGINT SIGHUP SIGTERM
+
+if [ $axis == "rows" ]; then # rows calculations
+	echo
+else
+	columncalc() {}
+	echo "Averages:"
+	columncalc $file "_avg"
+	echo -e "\nMedians:"
+	columncalc $file "_med"
+	echo
+fi
