@@ -5,9 +5,8 @@ _avg(){ if [ $# -gt 0 ]; then # if the function has arguments
 	for i in $@; do let total+=i; done
 	echo $((($total / $#) + ($total % $# * 2 >= $#)))
 fi }
-_med(){ if [ $# -gt 0 ]; then 
-	temp=$(printf "%s\n" "$@" | sort -nr | sed 's/\n/ /g')
-	echo $(echo $temp | cut -d' ' -f "$(((${#temp} / 2) - 2))")
+_med(){ if [ $# -gt 0 ]; then
+	printf "%s\n" "$@" | sort -nr | sed -n "$(($# / 2 + ($# % 2)))p"
 fi }
 
 [[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
