@@ -12,7 +12,7 @@ run: main
 	./$(EXE)
 
 debug: main
-	gdb -ex run ./$(EXE)
+	gdb -q -ex run ./$(EXE)
 
 clean:
 	rm -f $(EXE)
