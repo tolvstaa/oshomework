@@ -6,7 +6,7 @@ _avg(){ if [ $# -gt 0 ]; then # if the function has arguments
 	echo $((($total / $#) + ($total % $# * 2 >= $#))) # print the sum over the count, plus rounding
 fi }
 _med(){ if [ $# -gt 0 ]; then printf "%s\n" "$@" | sort -nr | sed -n "$(($# / 2 + ($# % 2)))p"; fi }
-# sort args, print the middle, skewing larger on an even count
+ # sort args, print the middle, skewing larger on an even count
 
 [[ $# =~ ^(1|2)$ ]] && { [[ $1 =~ ^-r.*$ ]] && axis=rows; } || { [[ $1 =~ ^-c.*$ ]] && axis=cols; } || _eex # argument parsing
 [ $# -eq 2 ] && [ ! -r $2 ] && _eex "$0: cannot read $2" # file checking
@@ -22,9 +22,5 @@ else			# columns calculations
 		printf "%s\t" "$(eval "$2 $list")" # run average or median function, from second arg
 	done }
 	idata=$(<$input) # store data in variable because stdin can't be read twice
-	echo Averages:
-	columncalc "$idata" "_avg" # calculate column averages
-	echo -e "\nMedians:"
-	columncalc "$idata" "_med" # calculate column medians
-	echo ""
+	printf "Averages:\n$(columncalc "$idata" "_avg")\nMedians:\n$(columncalc "$idata" "_med")\n" # calculate column data
 fi
