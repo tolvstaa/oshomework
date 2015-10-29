@@ -1,4 +1,4 @@
-CC=clang
+CC=gcc
 CFLAGS=-g
 EXE=tolvstaa.adventure
 
@@ -15,4 +15,4 @@ debug: main
 	gdb -q -ex run ./$(EXE)
 
 clean:
-	rm -f $(EXE)
+	rm -rf $(EXE) tolvstaa.rooms.*
