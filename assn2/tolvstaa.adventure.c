@@ -6,12 +6,14 @@
 #include <sys/stat.h>
 #include <dirent.h>
 #include <time.h>
+#include <errno.h>
 
 #define DIRPERMS S_IRWXU | S_IRGRP | S_IROTH
-#define NUM_ROOMS 7
 
+const int NUM_ROOMS = 7;
 const char* NAMES[] = {"Room A","Room B","Room C","Room D","Room E",
 					"Room F","Room G","Room H","Room I","Room J"};
+const int NUM_NAMES = sizeof(NAMES)/sizeof(char*);
 
 typedef struct Room {
 	struct Room** connections;
@@ -38,15 +40,41 @@ void init_room(Room* r, const char* name, int count, const char* type) {
 }
 
 void init_graph(Graph* g, int n) {
+	int i,j,m;
 	// allocate rooms
 	g->size = n;
 	g->data = malloc(sizeof(Room)*n);
+	
+	// randomize names
+	int write;
+	char r_names[NUM_ROOMS][8];						// random names
+	
+	for(i=0;i<NUM_ROOMS;i++) {						// for each slot in new array
+		srand(time(NULL)+i);
+		m = rand() % NUM_NAMES;						// pick random name from NAMES
+
+		write = 0;
+		while (!write && i != 0) {					// while name not inserted or errored out, skipping first
+			for (j=0;j<i;j++) {						// for existing names in new array
+				write = 1;
+				if(!strcmp(NAMES[m], r_names[j])) {	// if random name already exists
+					m=++m%NUM_NAMES;				// circular increment new room name
+					write = 0;
+					break;							// start scanning existing names again
+				}
+			}
+		}											// success
+		strcpy(r_names[i], NAMES[m]);				// name DNE in new array yet, insert name
+	}
+	
+	/* // printer for r_names
+	for(i=0;i<NUM_ROOMS;i++)
+		printf("%s, ",r_names[i]);
+	printf("\b\b.\n");
+	*/
 
 	// define rooms
-	char** r_names; // TODO scramble names
-
 	init_room(&(g->data[0]), r_names[0], rn_rooms(0), "START_ROOM");		// start room
-	int i;
 	for(i=1;i<n-1;i++)
 		init_room(&(g->data[i]), r_names[i], rn_rooms(i), "MID_ROOM");		// mid rooms
 	init_room(&(g->data[n-1]), r_names[n-1], rn_rooms(n-1), "END_ROOM");	// end room
@@ -76,11 +104,13 @@ void gen_roomfiles(char* dirname) {
 	char buffer[64];
 
 	init_graph(&g, NUM_ROOMS);
-
+	
+	/*
 	for(i=0;i<g.size;i++) {
 		sprintf(buffer, "%s/room%d", dirname, i);
 		populate_file(buffer, g.data[i]);
 	}
+	*/
 }
 
 int main(int argc, char** argv) {
