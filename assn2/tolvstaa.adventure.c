@@ -10,44 +10,56 @@
 
 #define DIRPERMS S_IRWXU | S_IRGRP | S_IROTH
 
-const int NUM_ROOMS = 7;
-const char* NAMES[] = {"Room A","Room B","Room C","Room D","Room E",
-					"Room F","Room G","Room H","Room I","Room J"};
-const int NUM_NAMES = sizeof(NAMES)/sizeof(char*);
+#define NUM_NAMES	10
+#define NUM_ROOMS	7
+#define NAME_LEN	7
+#define TYPE_LEN	11
+#define CONN_MIN	3
+#define CONN_MAX	6
+
+#define DIRNAME_LEN 32
+#define FPATH_BUF_LEN 64
+
+const char NAMES[NUM_NAMES][NAME_LEN] = {"Room A","Room B","Room C",
+	"Room D","Room E","Room F","Room G","Room H","Room I","Room J"};
+
 
 typedef struct Room {
-	struct Room** connections;
+	struct Room* connections[CONN_MAX];
 	int cn_count;
-	char name[8];
-	char type[11];
+	char name[NAME_LEN];
+	char type[TYPE_LEN];
 } Room;
 
-typedef struct Graph {
-	Room* data;
-	int size;
+typedef struct Graph { // TODO: refactor to not use a struct here
+	Room data[NUM_ROOMS];
 } Graph;
 
 
-int rn_rooms(int n) { // returns random int, 3-6 inclusive
+
+int rn_conns(int n) {
+	// returns random int, CONN_MIN-CONN_MAX inclusive
 	srand(time(NULL)+n);
-	return rand()%3+3;
+	return rand()%(CONN_MAX-CONN_MIN)+(CONN_MAX-(CONN_MAX-CONN_MIN));
 }
 
-void init_room(Room* r, const char* name, int count, const char* type) {
+
+
+void init_room(Room* r, const char name[NAME_LEN], int count, const char type[TYPE_LEN]) {
 	strcpy(r->name, name);
 	r->cn_count = count;
 	strcpy(r->type, type);
+	memset(r->connections, 0, CONN_MAX*sizeof(Room*));
 }
 
-void init_graph(Graph* g, int n) {
+
+
+void init_graph(Graph* g) {
 	int i,j,m;
-	// allocate rooms
-	g->size = n;
-	g->data = malloc(sizeof(Room)*n);
 	
 	// randomize names
 	int write;
-	char r_names[NUM_ROOMS][8];						// random names
+	char r_names[NUM_ROOMS][NAME_LEN];				// random names
 	
 	for(i=0;i<NUM_ROOMS;i++) {						// for each slot in new array
 		srand(time(NULL)+i);
@@ -67,62 +79,70 @@ void init_graph(Graph* g, int n) {
 		strcpy(r_names[i], NAMES[m]);				// name DNE in new array yet, insert name
 	}
 	
-	/* // printer for r_names
-	for(i=0;i<NUM_ROOMS;i++)
+	// printer for r_names
+	/* for(i=0;i<NUM_ROOMS;i++)
 		printf("%s, ",r_names[i]);
-	printf("\b\b.\n");
-	*/
+	printf("\b\b.\n"); */
 
 	// define rooms
-	init_room(&(g->data[0]), r_names[0], rn_rooms(0), "START_ROOM");		// start room
-	for(i=1;i<n-1;i++)
-		init_room(&(g->data[i]), r_names[i], rn_rooms(i), "MID_ROOM");		// mid rooms
-	init_room(&(g->data[n-1]), r_names[n-1], rn_rooms(n-1), "END_ROOM");	// end room
+	init_room(&(g->data[0]), r_names[0], rn_conns(0), "START_ROOM");		// start room
+	for(i=1;i<NUM_ROOMS-1;i++)
+		init_room(&(g->data[i]), r_names[i], rn_conns(i), "MID_ROOM");		// mid rooms
+	init_room(&(g->data[NUM_ROOMS-1]), r_names[NUM_ROOMS-1], rn_conns(NUM_ROOMS-1), "END_ROOM");	// end room
 
 	// TODO connect rooms
 }
 
 void import_graph(Graph* g, char* dirname) {
 	DIR* d = opendir(dirname);
+	// TODO Read all data back into new graph and use graph for game logic
 	closedir(d);
 }
+
+
 
 void populate_file(char* fname, Room r) {
 	FILE* o = fopen(fname,"w");
 	fprintf(o,"ROOM NAME: %s\n",r.name);
 	
 	int i;
-	for (i=0;i<r.cn_count;i++) fprintf(o,"CONNECTION %d: %s\n",i+1,r.connections[i]);
+	for (i=0;i<r.cn_count;i++) {
+		if(r.connections[i]) // FIXME
+			fprintf(o,"CONNECTION %d: %s\n",i+1,r.connections[i]->name);
+		else
+			fprintf(o,"ERROR: NULL CONNECTION\n");
+	}
 	
-	fprintf(o,"ROOM TYPE: %s", r.type);
+	fprintf(o,"ROOM TYPE: %s\n", r.type);
 	fclose(o);
 }
 
 void gen_roomfiles(char* dirname) {
 	int i;
 	Graph g;
-	char buffer[64];
-
-	init_graph(&g, NUM_ROOMS);
+	char buffer[FPATH_BUF_LEN];
 	
-	/*
-	for(i=0;i<g.size;i++) {
+	init_graph(&g);
+	
+	for(i=0;i<NUM_ROOMS;i++) {
 		sprintf(buffer, "%s/room%d", dirname, i);
 		populate_file(buffer, g.data[i]);
 	}
-	*/
 }
 
+
+
 int main(int argc, char** argv) {
-	char dirname[32];
+	char dirname[DIRNAME_LEN];
 	sprintf(dirname, "tolvstaa.rooms.%d", getpid());
 	
 	mkdir(dirname, DIRPERMS); // make directory
 	gen_roomfiles(dirname); // generate all room files
 	
-	Graph g;
-	// TODO Read all data back into new graph and use graph for game logic
+	// Graph g;
 	// import_graph(&g, dirname);
-
+	
+	// TODO user interaction
+	
 	return 0;
 }
