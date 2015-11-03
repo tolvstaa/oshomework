@@ -15,4 +15,5 @@ debug: main
 	gdb -q -ex run ./$(EXE)
 
 clean:
-	rm -rf $(EXE) tolvstaa.rooms.*
+	rm -f $(EXE)
+	rm -rf tolvstaa.rooms.*
