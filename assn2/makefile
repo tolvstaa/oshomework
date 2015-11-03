@@ -6,7 +6,7 @@ all: main
 
 main: tolvstaa.adventure.c
 	clear
-	$(CC) tolvstaa.adventure.c -o $(EXE) $(CFLAGS)
+	$(CC) $(CFLAGS) tolvstaa.adventure.c -o $(EXE)
 
 run: main
 	./$(EXE)
@@ -17,3 +17,6 @@ debug: main
 clean:
 	rm -f $(EXE)
 	rm -rf tolvstaa.rooms.*
+
+print: clean run
+	for x in tolvstaa.rooms.*/*; do cat $$x; echo ""; done
