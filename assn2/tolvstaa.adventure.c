@@ -26,6 +26,7 @@
 
 #define DIRNAME_LEN 32
 #define FPATH_BUF_LEN 64
+#define UIP_BUF_LEN 64
 
 const char NAMES[NUM_NAMES][NAME_LEN] = {"Room A","Room B","Room C",
 	"Room D","Room E","Room F","Room G","Room H","Room I","Room J"};
@@ -65,7 +66,7 @@ static inline int links_to(Room* src, Room* dest) {
 	return 0;
 }
 
-static inline int count_conns(Room** s) {
+static inline int count_conns(Room** s) { // return a count of non-null connections
 	int i;
 	for(i=0;i<CONN_MAX;i++) if(!s[i]) return i;
 	return CONN_MAX;
@@ -77,6 +78,18 @@ static inline Room* room_byname(Graph* g, const char* n) { // return address of 
 	return NULL;
 }
 
+static inline Room* room_bytype(Graph* g, const char* t) { // return address of first room with type
+	int i;
+	for(i=0;i<NUM_ROOMS;i++) if(!strcmp(g->data[i].type, t)) return g->data+i;
+	return NULL;
+}
+
+static inline int graph_enough_conns(Graph* g) { // return whether or not graph has at least CONN_MIN connections
+	int i;
+	for(i=0;i<NUM_ROOMS;i++) if(count_conns(g->data[i].conns) < CONN_MIN) return 0;
+	return 1;
+}
+	
 void init_graph(Graph* g) {
 	int i,j,k,m;
 	
@@ -97,24 +110,26 @@ void init_graph(Graph* g) {
 		strcpy(r_names[i], NAMES[m]);				// name DNE in new array yet, insert name
 	}
 	
-	// define rooms
-	init_room(g->data+0, r_names[0], rn_conns(0), "START_ROOM");		// start room
-	for(i=1;i<NUM_ROOMS-1;i++)
-		init_room(g->data+i, r_names[i], rn_conns(i), "MID_ROOM");		// mid rooms
-	init_room(g->data+NUM_ROOMS-1, r_names[NUM_ROOMS-1], rn_conns(NUM_ROOMS-1), "END_ROOM");	// end room
+	do {
+		// define rooms, zero connections
+		init_room(g->data+0, r_names[0], rn_conns(0), "START_ROOM");		// start room
+		for(i=1;i<NUM_ROOMS-1;i++)
+			init_room(g->data+i, r_names[i], rn_conns(i), "MID_ROOM");		// mid rooms
+		init_room(g->data+NUM_ROOMS-1, r_names[NUM_ROOMS-1], rn_conns(NUM_ROOMS-1), "END_ROOM");	// end room
 
-	// connect rooms
-	for(i=0; i<NUM_ROOMS; i++)														// for each room
-		for(j=count_conns(g->data[i].conns); j<g->data[i].cn_count; j++)			// for each source slot
-			for(k=(i+NUM_ROOMS/2)%NUM_ROOMS,m=0; m<NUM_ROOMS; k=(k+1)%NUM_ROOMS,m++)// iterate destination circularly
-				// except itself. if dest has open conns, and not already conn'd,
-				if((i!=k)&&(count_conns(g->data[k].conns)<g->data[k].cn_count)&&(!links_to(g->data+i,g->data+k))){
-					g->data[i].conns[j] = g->data+k;								// connect room to dest
-					*(next_null(g->data[k].conns)) = g->data+i;						// connect dest to room
-					break;															// stop looking for dests
-				}
-	for(i=0;i<NUM_ROOMS;i++)
-		g->data[i].cn_count = count_conns(g->data[i].conns);						// correct any remaining nulls
+		// connect rooms
+		for(i=0;i<NUM_ROOMS;i++)														// for each room
+			for(j=count_conns(g->data[i].conns);j<g->data[i].cn_count;j++)				// for each source slot
+				for(k=(i+NUM_ROOMS/2)%NUM_ROOMS,m=0;m<NUM_ROOMS; k=(k+1)%NUM_ROOMS,m++)	// iterate dest circularly
+					// except itself. if dest has open conns, and not already conn'd,
+					if((i!=k)&&(count_conns(g->data[k].conns)<g->data[k].cn_count)&&(!links_to(g->data+i,g->data+k))){
+						g->data[i].conns[j] = g->data+k;								// connect room to dest
+						*(next_null(g->data[k].conns)) = g->data+i;						// connect dest to room
+						break;															// stop looking for dests
+					}
+		for(i=0;i<NUM_ROOMS;i++)
+		g->data[i].cn_count = count_conns(g->data[i].conns);							// correct any remaining nulls
+	} while (!graph_enough_conns(g));
 }
 
 void data_import(Graph* g, const char* dirname, char mode) {
@@ -128,17 +143,17 @@ void data_import(Graph* g, const char* dirname, char mode) {
 		f = fopen(fpath_buf, "r");
 		talley=0;
 
-		while(fgets(line_buf, sizeof(line_buf)-1, f)) {
+		while(fgets(line_buf, sizeof(line_buf), f)) {
 			memset(field_buf, 0, sizeof(field_buf));
 			for(csi=strstr(line_buf,": ")+2,cdi=field_buf;*csi;csi++,cdi++) // copy value to new buffer
 				*cdi = *csi;
+			if ((cdi=strchr(field_buf, '\n')) != NULL) *cdi = '\0'; // replace newline with terminator
 
 			if(mode == 'n') // name mode
 				if(strncmp(line_buf, "ROOM NAME", 9) == 0)
 					strcpy(g->data[i].name, field_buf); // copy name
 				else
 					strcpy(g->data[i].type, field_buf); // copy type
-			
 			else { // connection mode
 				if(strncmp(line_buf, "CONNECTION", 10) == 0) { // copy conns
 					*(next_null(g->data[i].conns)) = room_byname(g, field_buf);
@@ -161,6 +176,7 @@ void import_graph(Graph* g, const char* dirname) {
 void populate_file(char* fname, Room r) {
 	FILE* o = fopen(fname,"w");
 	int i;
+
 	fprintf(o,"ROOM NAME: %s\n",r.name);	// print name
 	for (i=0;i<r.cn_count;i++) {			// print connections
 		if(r.conns[i])
@@ -178,7 +194,6 @@ void gen_files(char* dirname) {
 	char buffer[FPATH_BUF_LEN];
 	
 	init_graph(&g); // create a new graph
-	
 	for(i=0;i<NUM_ROOMS;i++) { // print each room to a file
 		sprintf(buffer, "%s/room%d", dirname, i);
 		populate_file(buffer, g.data[i]);
@@ -195,7 +210,41 @@ int main(int argc, char** argv) {
 	Graph g;
 	import_graph(&g, dirname);
 	
-	// TODO user interaction
+	Room* here = room_bytype(&g, "START_ROOM"), * next = NULL;
+	int i, steps;
+	char fpath_buf[FPATH_BUF_LEN], uip_buf[UIP_BUF_LEN], hist_buf[NAME_LEN];
+	char* ci;
+	sprintf(fpath_buf, "%s/log", dirname);
+	FILE* log = fopen(fpath_buf,"w+");
 	
+	printf("(Psst... end room is %s)\n", room_bytype(&g,"END_ROOM")->name);
+	while(strcmp(here->type, "END_ROOM")) {
+		fprintf(log, "%s\n", here->name);
+		printf("\nCURRENT LOCATION: %s\nPOSSIBLE CONNECTIONS: ", here->name);
+		for(i=0;i<here->cn_count;i++)
+		   printf("%s, ", here->conns[i]->name);
+		printf("\b\b.\nWHERE TO? >");
+
+		fgets(uip_buf, sizeof(uip_buf), stdin);
+		if ((ci=strchr(uip_buf, '\n')) != NULL) *ci = '\0'; // replace newline with terminator
+		for(i=0;i<here->cn_count;i++)
+			if(next = here->conns[i])
+				if(!strcmp(next->name, uip_buf))
+					break;
+				else
+					next = NULL;
+
+		if(next) {
+			here = next;
+			steps++;
+		}
+		else {printf("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n"); }
+	}
+	fprintf(log, "%s\n", here->name);
+	rewind(log);
+	printf("\nYOU HAVE FOUND THE END ROOM. CONGRATULATIONS!\n");
+	printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", steps);
+	while(fgets(hist_buf, sizeof(hist_buf), log)) printf(hist_buf);
+	fclose(log);
 	return 0;
 }
