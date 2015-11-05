@@ -8,11 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
-#include <dirent.h>
 #include <time.h>
-#include <errno.h>
 
 #define DIRPERMS S_IRWXU | S_IRGRP | S_IROTH
 
@@ -245,5 +242,6 @@ int main() {
 	while(fgets(hist_buf, sizeof(hist_buf), log)) // print log
 		printf("%s", hist_buf);
 	fclose(log);
+	remove(fpath_buf);
 	return 0;
 }
