@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <sys/prctl.h>
 
 #include "./aux.h"
 #define BUF_SIZE 2048
@@ -20,8 +21,8 @@ int main(int argc, char** argcv) {
 		
 		if(c->argc) {
 			if(!strcmp(c->argv[0], "exit")) { // handle exit
-				unparse(c);
-				return 0;
+				unparse(c); // deallocate command
+				return 0; // exit shell
 			} else if(!strcmp(c->argv[0], "cd" )) { // handle cd
 				prev_status = chdir((c->argc>1)?c->argv[1]:getenv("HOME"));
 				if(prev_status) printf("Could not change to directory \"%s\"\n", c->argv[1]);
@@ -30,28 +31,27 @@ int main(int argc, char** argcv) {
 				prev_status = 0;
 			} else { // handle binaries
 				char bg = !strcmp(c->argv[c->argc-1], "&"); // if background proc
-				if(bg) free(c->argv[--c->argc]); // strip '&' argument
+				if(bg) cmdshrink(c, 1);
 
 				pid_t pid = fork();
-				if(pid == 0) {
-					char* inf = cmdfile(c, "<"); // input file redir
+				if(pid == 0) { // if child
+					char* inf = (bg)?"/dev/null":cmdfile(c, "<"); // input file redir
 					char* otf = (bg)?"/dev/null":cmdfile(c, ">"); // output file redir
-					if(inf && !access(inf, R_OK)) freopen(inf, "r", stdin);
-					if(otf && !access(otf, W_OK)) freopen(otf, "w", stdout);
-
-					execvp(c->argv[0], c->argv);
-					fprintf(stderr, "%s: could not execute.\n", c->argv[0]);
-					unparse(c);
-					return 1;
-				} else if(!bg) {
+					if(freopen_or_die(inf, "r", stdin, c)) return 1; // redirect stdin
+					if(freopen_or_die(otf, "w", stdout, c)) return 1; // redirect stdout
+					cmdshrink(c, 2*(!!inf & !bg) + 2*(!!otf & !bg)); // remove redirs
+					
+					execvp(c->argv[0], c->argv); // execute
+					fprintf(stderr, "%s: command not found.\n", c->argv[0]); // failed exec
+					unparse(c); // deallocate command
+					return 1; // exit shell
+				} else if(!bg) { // if parent of non-background child
 					waitpid(pid, &prev_status, 0);
 					prev_status = WEXITSTATUS(prev_status);
 				}
 			}
 		}
-		unparse(c);
+		unparse(c); // deallocate command
 	}
 	return 0;
 }
-
-

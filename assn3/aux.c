@@ -10,6 +10,13 @@ void newln_comment_strip(char* c) {
 	if((n = strchr(c, '#'))) *n = '\0';
 }
 
+void cmdshrink(command* c, int n) {
+	for(int i=0;i<n;i++) { // remove arguments
+		free(c->argv[--c->argc]);
+		c->argv[c->argc] = NULL;
+	}
+}
+
 char* cmdfile(command* c, const char* token) { // return in/out filename or NULL
 	for(int i=0;i<c->argc;i++)
 		if(!strcmp(c->argv[i],token)) {
@@ -43,4 +50,13 @@ void unparse(command* c) {
 		free(c->argv[i]);
 	}
 	free(c);
+}
+
+int freopen_or_die(const char* f, const char* m, FILE* o, command* c) {
+	if(f && !freopen(f, m, o)) {
+		printf("Could not open file \"%s\".\n", f);
+		unparse(c);
+		return 1;
+	}
+	return 0;
 }
