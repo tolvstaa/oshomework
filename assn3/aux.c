@@ -10,36 +10,30 @@ void newln_comment_strip(char* c) {
 	if((n = strchr(c, '#'))) *n = '\0';
 }
 
+char* cmdfile(command* c, const char* token) { // return in/out filename or NULL
+	for(int i=0;i<c->argc;i++)
+		if(!strcmp(c->argv[i],token)) {
+			printf("%sing to \"%s\"\n", token, c->argv[i+1]);
+			return c->argv[i+1];
+		}
+	return NULL;
+}
 
 command* parse(char* input) {
-	
 	// initialize variables
 	command* ret = malloc(sizeof(command));
 	char* temp;
 	int i;
-	memset(ret->argv, 512*sizeof(char*), 0);
+	memset(ret->argv, 0, 512*sizeof(char*));
 	ret->argc = 0;
+	if(!strlen(input)) { return ret; } // zero-length input
 	
-	// zero-length input
-	if(!strlen(input)) {
-		printf("Returning zero input.\n");
-		return ret;
-	}
-	
-	// initialize strtok
-	temp = strtok(input, " ");
+	temp = strtok(input, " "); // initialize strtok
 	ret->argv[0] = strdup(temp);
-	printf("Token 0: %s\n", temp);
-	
-	// tokenize arguments
-	for(i=1; (temp = strtok(NULL, " ")); i++) {
-		printf("Token %d: %s\n",i, temp);
-		ret->argv[i] = strdup(temp);
+	for(ret->argc=1; (temp = strtok(NULL, " ")); ret->argc++) { // tokenize arguments
+		ret->argv[ret->argc] = strdup(temp);
 	}
 	
-	// set arg count
-	ret->argc = i+1;
-
 	return ret;
 }
 
