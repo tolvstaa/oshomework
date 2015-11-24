@@ -20,7 +20,7 @@ void cmdshrink(command* c, int n) {
 char* cmdfile(command* c, const char* token) { // return in/out filename or NULL
 	for(int i=0;i<c->argc;i++)
 		if(!strcmp(c->argv[i],token)) {
-			printf("%sing to \"%s\"\n", token, c->argv[i+1]);
+			fprintf(stderr, "%sing to \"%s\"\n", token, c->argv[i+1]);
 			return c->argv[i+1];
 		}
 	return NULL;
@@ -44,8 +44,7 @@ command* parse(char* input) {
 	return ret;
 }
 
-void unparse(command* c) {
-	// deallocate command
+void unparse(command* c) { // deallocate command
 	for(int i=0; i<c->argc; i++) {
 		free(c->argv[i]);
 	}
@@ -54,7 +53,7 @@ void unparse(command* c) {
 
 int freopen_or_die(const char* f, const char* m, FILE* o, command* c) {
 	if(f && !freopen(f, m, o)) {
-		printf("Could not open file \"%s\".\n", f);
+		fprintf(stderr, "Could not open file \"%s\".\n", f);
 		unparse(c);
 		return 1;
 	}

@@ -25,7 +25,7 @@ int main(int argc, char** argcv) {
 				return 0; // exit shell
 			} else if(!strcmp(c->argv[0], "cd" )) { // handle cd
 				prev_status = chdir((c->argc>1)?c->argv[1]:getenv("HOME"));
-				if(prev_status) printf("Could not change to directory \"%s\"\n", c->argv[1]);
+				if(prev_status) fprintf(stderr, "Could not change to directory \"%s\"\n", c->argv[1]);
 			} else if(!strcmp(c->argv[0], "status")) { // handle status
 				printf("%d\n", prev_status);
 				prev_status = 0;
@@ -41,6 +41,7 @@ int main(int argc, char** argcv) {
 					if(freopen_or_die(otf, "w", stdout, c)) return 1; // redirect stdout
 					cmdshrink(c, 2*(!!inf & !bg) + 2*(!!otf & !bg)); // remove redirs
 					
+					prctl(PR_SET_PDEATHSIG, SIGHUP);
 					execvp(c->argv[0], c->argv); // execute
 					fprintf(stderr, "%s: command not found.\n", c->argv[0]); // failed exec
 					unparse(c); // deallocate command
