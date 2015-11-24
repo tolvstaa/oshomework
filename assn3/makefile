@@ -1,5 +1,5 @@
 CC=clang
-CFLAGS=-g -Wno-tautological-constant-out-of-range-compare
+CFLAGS=-g
 EXE=smallsh
 
 all: clear main aux
@@ -28,3 +28,5 @@ clear:
 
 clean:
 	rm -f $(EXE) *.o
+	rm -rf ~/testdir*
+	rm -f junk

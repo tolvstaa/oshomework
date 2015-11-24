@@ -13,9 +13,10 @@
 int main(int argc, char** argcv) {
 	char ipbuf[BUF_SIZE];
 	command* c; 
-	int prev_status;
+	int status, prev_status;
+	signal(SIGCHLD, child_death);
 
-	while(printf(": "), fgets((char*)ipbuf, BUF_SIZE, stdin)) {
+	while(printf(": "), fflush(stdout), fgets((char*)ipbuf, BUF_SIZE, stdin)) {
 		newln_comment_strip((char*)ipbuf); // strip newline from input
 		c = parse(ipbuf);
 		
@@ -29,26 +30,30 @@ int main(int argc, char** argcv) {
 			} else if(!strcmp(c->argv[0], "status")) { // handle status
 				printf("%d\n", prev_status);
 				prev_status = 0;
+				
 			} else { // handle binaries
-				char bg = !strcmp(c->argv[c->argc-1], "&"); // if background proc
+				int bg = !strcmp(c->argv[c->argc-1], "&"); // if background proc
 				if(bg) cmdshrink(c, 1);
 
-				pid_t pid = fork();
+				pid_t bgpid, pid = fork();
 				if(pid == 0) { // if child
-					char* inf = (bg)?"/dev/null":cmdfile(c, "<"); // input file redir
-					char* otf = (bg)?"/dev/null":cmdfile(c, ">"); // output file redir
+					if(bg) printf("background pid is %d\n", getpid());
+					char* inf = NULL, * otf = NULL;
+					int ird = cmdfile(c, "<", &inf, bg); // input file redir
+					int ord = cmdfile(c, ">", &otf, bg); // output file redir
 					if(freopen_or_die(inf, "r", stdin, c)) return 1; // redirect stdin
 					if(freopen_or_die(otf, "w", stdout, c)) return 1; // redirect stdout
-					cmdshrink(c, 2*(!!inf & !bg) + 2*(!!otf & !bg)); // remove redirs
+					cmdshrink(c, 2*ird + 2*ord); // remove redirs
 					
-					prctl(PR_SET_PDEATHSIG, SIGHUP);
 					execvp(c->argv[0], c->argv); // execute
 					fprintf(stderr, "%s: command not found.\n", c->argv[0]); // failed exec
 					unparse(c); // deallocate command
 					return 1; // exit shell
+
 				} else if(!bg) { // if parent of non-background child
-					waitpid(pid, &prev_status, 0);
-					prev_status = WEXITSTATUS(prev_status);
+					waitpid(pid, &status, 0);
+					prev_status = WEXITSTATUS(status);
+				
 				}
 			}
 		}

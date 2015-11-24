@@ -1,6 +1,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/wait.h>
 #include "aux.h"
 
 // truncate newline and comment from string
@@ -10,6 +11,16 @@ void newln_comment_strip(char* c) {
 	if((n = strchr(c, '#'))) *n = '\0';
 }
 
+void child_death(int signum) {
+	int status;
+	pid_t pid = waitpid(0,&status, WNOHANG);
+	if(pid > 0) {
+		printf("background pid %d is done: ", pid);
+		if(!WIFSIGNALED(status)) printf("exit status %d\n", pid, WEXITSTATUS(status));
+		else printf("terminated by signal %d\n", WTERMSIG(status));
+	}
+}
+
 void cmdshrink(command* c, int n) {
 	for(int i=0;i<n;i++) { // remove arguments
 		free(c->argv[--c->argc]);
@@ -17,9 +28,13 @@ void cmdshrink(command* c, int n) {
 	}
 }
 
-char* cmdfile(command* c, const char* token) { // return in/out filename or NULL
-	for(int i=0;i<c->argc;i++) if(!strcmp(c->argv[i],token)) return c->argv[i+1];
-	return NULL;
+int cmdfile(command* c, const char* token, char** dest, int bg) { // return in/out filename or NULL
+	if(bg) *dest = "/dev/null";
+	for(int i=0;i<c->argc;i++) if(!strcmp(c->argv[i],token)) {
+		*dest = c->argv[i+1];
+		return 1;
+	}
+	return 0;
 }
 
 command* parse(char* input) {
