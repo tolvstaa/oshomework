@@ -14,6 +14,7 @@ int main(int argc, char** argcv) {
 	char ipbuf[BUF_SIZE];
 	command* c; 
 	int status, prev_status, bgs;
+	signal(SIGINT, sig_catch);
 
 	while(printf(": "), fflush(stdout), fgets((char*)ipbuf, BUF_SIZE, stdin)) {
 		newln_comment_strip((char*)ipbuf); // strip newline from input

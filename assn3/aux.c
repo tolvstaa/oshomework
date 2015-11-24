@@ -18,6 +18,10 @@ void cmdshrink(command* c, int n) {
 	}
 }
 
+void sig_catch(int signo) {
+	printf("terminated by signal %d\n", signo);
+}
+
 int cmdfile(command* c, const char* token, char** dest, int bg) { // return in/out filename or NULL
 	if(bg) *dest = "/dev/null";
 	for(int i=0;i<c->argc;i++) if(!strcmp(c->argv[i],token)) {
