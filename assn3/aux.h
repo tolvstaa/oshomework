@@ -7,7 +7,6 @@ typedef struct {
 } command;
 
 void newln_comment_strip(char*);
-void child_death(int);
 void cmdshrink(command*, int);
 int cmdfile(command*,const char*, char**, int);
 command* parse(char*);

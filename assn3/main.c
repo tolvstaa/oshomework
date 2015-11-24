@@ -13,8 +13,7 @@
 int main(int argc, char** argcv) {
 	char ipbuf[BUF_SIZE];
 	command* c; 
-	int status, prev_status;
-	signal(SIGCHLD, child_death);
+	int status, prev_status, bgs;
 
 	while(printf(": "), fflush(stdout), fgets((char*)ipbuf, BUF_SIZE, stdin)) {
 		newln_comment_strip((char*)ipbuf); // strip newline from input
@@ -23,6 +22,7 @@ int main(int argc, char** argcv) {
 		if(c->argc) {
 			if(!strcmp(c->argv[0], "exit")) { // handle exit
 				unparse(c); // deallocate command
+				kill(0, SIGTERM); // kill process group
 				return 0; // exit shell
 			} else if(!strcmp(c->argv[0], "cd" )) { // handle cd
 				prev_status = chdir((c->argc>1)?c->argv[1]:getenv("HOME"));
@@ -37,7 +37,6 @@ int main(int argc, char** argcv) {
 
 				pid_t bgpid, pid = fork();
 				if(pid == 0) { // if child
-					if(bg) printf("background pid is %d\n", getpid());
 					char* inf = NULL, * otf = NULL;
 					int ird = cmdfile(c, "<", &inf, bg); // input file redir
 					int ord = cmdfile(c, ">", &otf, bg); // output file redir
@@ -54,11 +53,19 @@ int main(int argc, char** argcv) {
 					waitpid(pid, &status, 0);
 					prev_status = WEXITSTATUS(status);
 				
+				} else { // if parent of background child
+					printf("background pid is %d\n", pid);
 				}
 			}
 		}
 		unparse(c); // deallocate command
-		fflush(stdout);
+		
+		pid_t pid = waitpid(0,&bgs, WNOHANG); // background process status
+		if(pid > 0) {
+			printf("background pid %d is done: ", pid);
+			if(WIFSIGNALED(bgs)) printf("terminated by signal %d\n", WTERMSIG(bgs));
+			else printf("exit status %d\n", WEXITSTATUS(bgs));
+		}
 	}
 	return 0;
 }

@@ -11,16 +11,6 @@ void newln_comment_strip(char* c) {
 	if((n = strchr(c, '#'))) *n = '\0';
 }
 
-void child_death(int signum) {
-	int status;
-	pid_t pid = waitpid(0,&status, WNOHANG);
-	if(pid > 0) {
-		printf("background pid %d is done: ", pid);
-		if(!WIFSIGNALED(status)) printf("exit status %d\n", pid, WEXITSTATUS(status));
-		else printf("terminated by signal %d\n", WTERMSIG(status));
-	}
-}
-
 void cmdshrink(command* c, int n) {
 	for(int i=0;i<n;i++) { // remove arguments
 		free(c->argv[--c->argc]);
@@ -64,9 +54,9 @@ void unparse(command* c) { // deallocate command
 
 int freopen_or_die(const char* f, const char* m, FILE* o, command* c) {
 	if(f && !freopen(f, m, o)) {
-		fprintf(stderr, "Could not open file \"%s\".\n", f);
+		fprintf(stderr, "Could not open file \"%s\".\n", f); // if freopen fails
 		unparse(c);
 		return 1;
 	}
-	return 0;
+	return 0; // if no filename
 }
