@@ -6,10 +6,6 @@ all: clear main aux
 	$(CC) main.o aux.o -o $(EXE)
 
 
-test: clear aux
-	$(CC) test.c aux.o -o $(EXE)
-	./$(EXE)
-
 main: main.c
 	$(CC) $(CFLAGS) main.c -c
 
@@ -23,6 +19,9 @@ run: all
 
 debug: all
 	gdb -q -ex run ./$(EXE)
+
+test: all
+	./p3testscript
 
 clear:
 	clear
