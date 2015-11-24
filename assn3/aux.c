@@ -18,11 +18,7 @@ void cmdshrink(command* c, int n) {
 }
 
 char* cmdfile(command* c, const char* token) { // return in/out filename or NULL
-	for(int i=0;i<c->argc;i++)
-		if(!strcmp(c->argv[i],token)) {
-			fprintf(stderr, "%sing to \"%s\"\n", token, c->argv[i+1]);
-			return c->argv[i+1];
-		}
+	for(int i=0;i<c->argc;i++) if(!strcmp(c->argv[i],token)) return c->argv[i+1];
 	return NULL;
 }
 
