@@ -90,6 +90,7 @@ int main(int argc, char** argv) {
     struct sockaddr_in server;
     server.sin_family = AF_INET;
     server.sin_port = htons(port);
+    server.sin_addr.s_addr = INADDR_ANY;
     
     if(connect(sendsock, (const struct sockaddr *) &server, sizeof(server))) {
         errexit("Could not connect to socket.\n");
