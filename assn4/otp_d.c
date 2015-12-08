@@ -32,11 +32,11 @@ int parse(char* input, char** key) { // key should be like <this> for enc, >this
 }
 
 char* crypt(char* input, char* key) { // new memory with converted text
-	char* output = (char*) malloc((strlen(input)+1)*sizeof(char)), * i, * j, * k;
-	for(i = input, j = output, k = key; *i; i++, j++, k++)
-		*j = ((*j = ((*i-'A') + (CRYPT?-1:1)*(*k-'A'))) < 0?*j+27:*j%27)+'A';
-	strcat(output, "\0");
-	return output;
+    char* output = (char*) malloc((strlen(input)+1)*sizeof(char)), * i, * j, * k;
+    for(i = input, j = output, k = key; *i; i++, j++, k++)
+        *j = ((*j = ((*i-'A') + (CRYPT?-1:1)*(*k-'A'))) < 0?*j+27:*j%27)+'A';
+    strcat(output, "\0");
+    return output;
 }
 
 int main(int argc, char** argv) {
@@ -44,29 +44,29 @@ int main(int argc, char** argv) {
     if(argv[1]) port = atoi(argv[1]); // port passed from command line
     else exit(1);
 
-	int listensock = socket(AF_INET, SOCK_STREAM, 0);
-	
-	struct sockaddr_in server;
-	server.sin_family = AF_INET;
-	server.sin_port = htons(port);
-	server.sin_addr.s_addr = INADDR_ANY;
-	
-	if(bind(listensock, (struct sockaddr*) &server, sizeof(server))) {
+    int listensock = socket(AF_INET, SOCK_STREAM, 0);
+    
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    server.sin_addr.s_addr = INADDR_ANY;
+    
+    if(bind(listensock, (struct sockaddr*) &server, sizeof(server))) {
         fprintf(stderr, "Failed to bind socket.\n");
         exit(1);
     }
-	if(listen(listensock, 5)) {
+    if(listen(listensock, 5)) {
         fprintf(stderr, "Failed to listen on socket.\n");
         exit(1);
     }
 
-	int i;
-	pid_t pid;
-	for(int i=0;i<5;i++) if(!(pid=fork())) break; // spawn 5 children
+    int i;
+    pid_t pid;
+    for(int i=0;i<5;i++) if(!(pid=fork())) break; // spawn 5 children
 
-	for(;;) {
-		if(!pid) { // child
-            //fprintf(stderr, "Child: New child PID %d, listening on %d\n", getpid(), port);
+    for(;;) {
+        if(!pid) { // child
+            fprintf(stderr, "Child: New child PID %d, listening on %d\n", getpid(), port);
             int common_fd = accept(listensock, NULL, NULL); // blocking get client descriptor
             int inputsize; // read message sizes
             read(common_fd, &inputsize, sizeof(int32_t));
@@ -86,20 +86,20 @@ int main(int argc, char** argv) {
             free(result);
 
             exit(0); // phoenix death
-		} else { // parent
+        } else { // parent
             int status;
-			pid_t cpid = wait(&status); // blocking call
-			
-            /*fprintf(stderr, "Parent: ");
+            pid_t cpid = wait(&status); // blocking call
+            
+            fprintf(stderr, "Parent: ");
             if(WIFEXITED(status))
                 fprintf(stderr, "Child %d exited normally, with exit status %d.\n", cpid, WEXITSTATUS(status));
             else if(WIFSIGNALED(status) && WTERMSIG(status)==11)
                 fprintf(stderr, "Child %d suffered a segmentation fault.\n", cpid);
             else if(WIFSIGNALED(status))
                 fprintf(stderr, "Child %d was terminated with signal %d.\n", cpid, WTERMSIG(status));
-			*/
+            
             pid = fork();
-		}
-	}
-	return 0;
+        }
+    }
+    return 0;
 }

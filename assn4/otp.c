@@ -84,14 +84,13 @@ int main(int argc, char** argv) {
     if(argv[3]) port = atoi(argv[3]); // port passed from command line
     else exit(1);
 
-	int sendsock = socket(AF_INET, SOCK_STREAM, 0);
-	if(sendsock==-1) errexit("Could not open socket.\n");
+    int sendsock = socket(AF_INET, SOCK_STREAM, 0);
+    if(sendsock==-1) errexit("Could not open socket.\n");
 
-	struct sockaddr_in server;
-	server.sin_family = AF_INET;
-	server.sin_port = htons(port);
-	//server.sin_addr.s_addr = INADDR_ANY;
-	
+    struct sockaddr_in server;
+    server.sin_family = AF_INET;
+    server.sin_port = htons(port);
+    
     if(connect(sendsock, (const struct sockaddr *) &server, sizeof(server))) {
         errexit("Could not connect to socket.\n");
     }
