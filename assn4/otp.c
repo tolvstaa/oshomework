@@ -1,4 +1,3 @@
-#define _POSIX_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -61,6 +60,7 @@ int main(int argc, char** argv) {
     
     char* msg = stringread(argv[1]);
     char* key = stringread(argv[2]);
+
     if(!valid_chars(msg)) errexit("Invalid characters in message.\n");
     if(!valid_chars(key)) errexit("Invalid characters in key.\n");
     

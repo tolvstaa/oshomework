@@ -22,4 +22,4 @@ clear:
 	clear
 
 clean:
-	rm -f otp_enc_d otp_dec_d otp_enc otp_dec keygen ciphertext* plaintext*_a
+	rm -f otp_enc_d otp_dec_d otp_enc otp_dec keygen ciphertext* plaintext*_a key20 key70000

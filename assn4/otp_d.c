@@ -8,6 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
+#include <errno.h>
 
 #if !(defined(CRYPT) && (CRYPT==0 || CRYPT==1))
     #error "Crypt must be set to 0 for encryption or 1 for decryption."
@@ -50,8 +51,14 @@ int main(int argc, char** argv) {
 	server.sin_port = htons(port);
 	server.sin_addr.s_addr = INADDR_ANY;
 	
-	bind(listensock, (struct sockaddr*) &server, sizeof(server));
-	listen(listensock, 5);
+	if(bind(listensock, (struct sockaddr*) &server, sizeof(server))) {
+        fprintf(stderr, "Failed to bind socket.\n");
+        exit(1);
+    }
+	if(listen(listensock, 5)) {
+        fprintf(stderr, "Failed to listen on socket.\n");
+        exit(1);
+    }
 
 	int i;
 	pid_t pid;
@@ -59,18 +66,15 @@ int main(int argc, char** argv) {
 
 	for(;;) {
 		if(!pid) { // child
-            //printf("Child: New child PID %d, listening on %d\n", getpid(), port);
+            //fprintf(stderr, "Child: New child PID %d, listening on %d\n", getpid(), port);
             int common_fd = accept(listensock, NULL, NULL); // blocking get client descriptor
             int inputsize; // read message sizes
             read(common_fd, &inputsize, sizeof(int32_t));
             char* input = malloc((sizeof(char)*(inputsize+1)));
-            
+
             recv(common_fd, input, inputsize, 0); // get input
-            
-            char* key; // parse input
-            if ((parse(input, &key)) != CRYPT) {
-                printf("Child: Bad method in %scryptor child %d: given %scrypt job.\n",
-                    (CRYPT?"de":"en"), getpid(), (CRYPT?"en":"de"));
+            char* key;
+            if ((parse(input, &key)) != CRYPT) { // parse input
                 send(common_fd, "x", 2, 0);
                 exit(1);
             }
@@ -78,7 +82,7 @@ int main(int argc, char** argv) {
             free(input);
 
             // send back to client
-            send(common_fd, result, strlen(result)+1, 0);
+            send(common_fd, result, strlen(result), 0);
             free(result);
 
             exit(0); // phoenix death
@@ -86,13 +90,13 @@ int main(int argc, char** argv) {
             int status;
 			pid_t cpid = wait(&status); // blocking call
 			
-            /*printf("Parent: ");
+            /*fprintf(stderr, "Parent: ");
             if(WIFEXITED(status))
-                printf("Child %d exited normally, with exit status %d.\n", cpid, WEXITSTATUS(status));
+                fprintf(stderr, "Child %d exited normally, with exit status %d.\n", cpid, WEXITSTATUS(status));
             else if(WIFSIGNALED(status) && WTERMSIG(status)==11)
-                printf("Child %d suffered a segmentation fault.\n", cpid);
+                fprintf(stderr, "Child %d suffered a segmentation fault.\n", cpid);
             else if(WIFSIGNALED(status))
-                printf("Child %d was terminated with signal %d.\n", cpid, WTERMSIG(status));
+                fprintf(stderr, "Child %d was terminated with signal %d.\n", cpid, WTERMSIG(status));
 			*/
             pid = fork();
 		}
